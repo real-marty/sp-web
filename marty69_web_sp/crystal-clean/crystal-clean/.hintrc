@@ -1,0 +1,14 @@
+{
+  "extends": [
+    "development"
+  ],
+  "hints": {
+    "axe/structure": [
+      "default",
+      {
+        "dlitem": "off"
+      }
+    ],
+    "no-inline-styles": "off"
+  }
+}

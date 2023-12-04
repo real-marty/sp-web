@@ -1,0 +1,27 @@
+@tailwind base;
+
+@font-face {
+  font-family: "Montserrat";
+  font-weight: 200 900;
+  font-display: block;
+  font-style: normal;
+  font-stretch: 75% 125%;
+  src: url("../fonts/Montserrat/Montserrat-VariableFont_wght.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "Rye";
+  font-display: block;
+  font-style: normal;
+  src: url("../fonts/Rye/Rye-Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Mona Sans";
+  font-weight: 200 900;
+  font-display: block;
+  font-style: normal;
+  font-stretch: 75% 125%;
+  src: url("../fonts/Mona-Sans.var.woff2") format("woff2");
+}

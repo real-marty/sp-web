@@ -1,0 +1,209 @@
+datasource db {
+  provider = "postgresql"
+  url = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  // directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+  // shadowDatabaseUrl = env("POSTGRES_URL_NON_POOLING") // used for migrations
+}
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+model user_message{
+  id          String      @id @default(cuid())
+  name        String   
+  surname     String
+  email       String  
+  regEmail    String 
+  message     String
+  createdAt   DateTime    @default(now())
+}
+
+model User {
+  id                    String     @id @default(uuid())
+  name                  String
+  email                 String    @unique
+  emailVerified         DateTime?   @map("email_verified")
+  image                 String?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+  accounts              Account[]
+  sessions              Session[]
+  stripeCustomerId      String?    @map("stripe_customer_id")
+  role                  Role       @default(USER)
+  orders                Order[]     @relation("UserToOrder")
+  @@map("users")
+}
+model Account {
+  id                 String    @id @default(cuid())
+  userId             String    @map("user_id")
+  type               String?
+  provider           String
+  providerAccountId  String    @map("provider_account_id")
+  token_type         String?
+  refresh_token      String?   @db.Text
+  access_token       String?   @db.Text
+  expires_at         Int?
+  scope              String?
+  id_token           String? @db.Text
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String?  @map("user_id")
+  sessionToken String   @db.Text @map("session_token") @unique
+  accessToken  String?  @db.Text @map("access_token")
+  expires      DateTime
+  user         User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("sessions")
+}
+
+
+model VerificationRequest {
+  id         String   @id @default(cuid())
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, token])
+}
+model Product {
+  id                  String          @id @default(uuid())
+  categoryId          String?         // Optional Foreign Key to Category
+  category            Category?        @relation(fields: [categoryId], references: [id])
+  name                String
+  description         String
+  priceCZK            Decimal
+  priceEUR            Decimal
+  isFeatured          Boolean         @default(false)
+  isArchived          Boolean         @default(false)
+  sizeId              String?         // Optional Foreign Key to Size
+  size                Size?           @relation(fields: [sizeId], references: [id])
+  specificationId     String?         // Optional Foreign Key to Specification
+  specification       Specification?  @relation(fields: [specificationId], references: [id])
+  colorId             String?         // Optional Foreign Key to Color
+  color               Color?          @relation(fields: [colorId], references: [id])
+  images              Image[]         // Relation to Image model
+  orderItems          OrderItem[]     // Relation to Order model
+  features            ProductFeature[] // Relation to the join table
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@index([specificationId])
+  @@index([categoryId])
+  @@index([sizeId])
+  @@index([colorId])
+}
+
+
+model Order {
+  id          String    @id @default(uuid())
+  userId      String    // Foreign Key to User
+  user        User      @relation("UserToOrder",fields: [userId], references: [id]) // Relation to User model
+  orderItems  OrderItem[]
+  isPaid      Boolean   @default(false)
+  phone       String    @default("")
+  address     String    @default("")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([userId]) // Index for the userId field
+}
+
+// Intermediary for a many-to-many relationship
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String  // Foreign Key to Order
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String  // Foreign Key to Product
+  product   Product @relation(fields: [productId], references: [id])
+  @@index([orderId])
+  @@index([productId])
+}
+
+
+model Category {
+  id          String      @id @default(uuid())
+  name        String
+  products    Product[]   
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+}
+
+model Size {
+  id          String    @id @default(uuid())
+  name        String
+  value       String
+  products    Product[] // Relation to Product model
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+}
+
+model Color {
+  id          String   @id @default(uuid())
+  name        String
+  value       String
+  products    Product[] // Relation to Product model
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+}
+
+model Specification {
+  id          String   @id @default(uuid())
+  name        String
+  products    Product[] // Relation to Product model
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+}
+
+model Feature {
+  id         String   @id @default(uuid())
+  name       String
+  products   ProductFeature[] 
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+
+// Join table for many-to-many relation between Product and Feature
+model ProductFeature {
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id])
+  featureId  String
+  feature    Feature   @relation(fields: [featureId], references: [id])
+
+  @@id([productId, featureId])
+}
+
+
+model Image {
+  id          String   @id @default(uuid())
+  productId   String   // Foreign Key to Product
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url         String   // URL of the image
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([productId])
+}
